@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy 3rd Anniversary Mahal</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- OrbitControls -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- GSAP for smooth animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600&family=Great+Vibes&display=swap"
+        rel="stylesheet">
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #0d0208;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            user-select: none;
+        }
+
+        .font-cursive {
+            font-family: 'Dancing Script', cursive;
+        }
+
+        .font-letter {
+            font-family: 'Great Vibes', cursive;
+        }
+
+        /* Glassmorphism styling */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 182, 193, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(255, 0, 85, 0.25);
+        }
+
+        .glass-button {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            transition: all 0.3s ease;
+        }
+
+        .glass-button:hover {
+            background: rgba(255, 80, 130, 0.3);
+            border-color: rgba(255, 150, 180, 0.6);
+            box-shadow: 0 0 20px rgba(255, 50, 100, 0.5);
+            transform: translateY(-2px);
+        }
+
+        /* Custom Scrollbar for letter */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(244, 114, 182, 0.4);
+            border-radius: 10px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(244, 114, 182, 0.7);
+        }
+
+        /* Glow effects */
+        .text-glow {
+            text-shadow: 0 0 12px rgba(255, 77, 109, 0.8), 0 0 24px rgba(255, 77, 109, 0.4);
+        }
+
+        .heart-pulse {
+            animation: pulse-glow 2s infinite ease-in-out;
+        }
+
+        @keyframes pulse-glow {
+
+            0%,
+            100% {
+                filter: drop-shadow(0 0 15px rgba(255, 50, 100, 0.6));
+            }
+
+            50% {
+                filter: drop-shadow(0 0 30px rgba(255, 80, 140, 0.9));
+            }
+        }
+
+        /* Flower / Sparkle Background */
+        .particle-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+    </style>
+</head>
+
+<body class="relative min-h-screen text-pink-100 flex flex-col justify-between">
+
+    <!-- 3D Canvas Container -->
+    <div id="canvas-container" class="fixed inset-0 z-0"></div>
+
+    <!-- UI Overlay Header -->
+    <header class="relative z-10 w-full p-6 flex justify-between items-center max-w-7xl mx-auto pointer-events-none">
+        <div class="pointer-events-auto flex items-center space-x-3">
+            <div
+                class="w-10 h-10 rounded-full bg-pink-600/30 border border-pink-400/40 flex items-center justify-center text-pink-300 shadow-lg shadow-pink-900/50">
+                <i data-lucide="heart" class="w-5 h-5 fill-pink-500 text-pink-400 animate-pulse"></i>
+            </div>
+            <span class="font-cursive text-2xl font-bold tracking-wider text-pink-200 text-glow">Everlasting Love</span>
+        </div>
+
+        <button id="audio-toggle"
+            class="pointer-events-auto glass-button p-3 rounded-full text-pink-200 flex items-center justify-center cursor-pointer shadow-lg"
+            title="Toggle Music">
+            <i data-lucide="volume-x" id="audio-icon" class="w-5 h-5"></i>
+        </button>
+    </header>
+
+    <!-- Main Interactive Controls Overlay -->
+    <main
+        class="relative z-10 flex flex-col items-center justify-center flex-1 px-4 text-center pointer-events-none mb-12">
+
+        <!-- Instruction Text -->
+        <div id="ui-hint"
+            class="transition-opacity duration-700 opacity-100 mb-6 bg-black/40 backdrop-blur-md px-6 py-2.5 rounded-full border border-pink-500/20 shadow-xl">
+            <p
+                class="text-xs md:text-sm font-medium tracking-widest uppercase text-pink-300 flex items-center space-x-2">
+                <span class="inline-block w-2 h-2 rounded-full bg-pink-500 animate-ping"></span>
+                <span>Click the heart or press the button below</span>
+            </p>
+        </div>
+
+        <!-- Action Button Group -->
+        <div class="pointer-events-auto flex flex-col sm:flex-row gap-4 items-center justify-center">
+            <button id="open-heart-btn"
+                class="glass-button heart-pulse group px-8 py-4 rounded-full text-lg font-semibold text-pink-100 flex items-center space-x-3 cursor-pointer shadow-2xl relative overflow-hidden">
+                <div
+                    class="absolute inset-0 bg-gradient-to-r from-pink-600/40 to-rose-600/40 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                </div>
+                <i data-lucide="sparkles" class="w-5 h-5 text-pink-300 group-hover:rotate-12 transition-transform"></i>
+                <span class="relative z-10">Unfold My Heart</span>
+                <i data-lucide="arrow-right"
+                    class="w-5 h-5 text-pink-300 group-hover:translate-x-1 transition-transform"></i>
+            </button>
+
+            <button id="letter-trigger-btn"
+                class="glass-button px-7 py-4 rounded-full text-sm font-medium text-pink-200 flex items-center space-x-2 cursor-pointer shadow-lg hover:text-white hidden opacity-0 transition-opacity duration-500">
+                <i data-lucide="mail-open" class="w-4 h-4 text-rose-400"></i>
+                <span>Read Love Letter</span>
+            </button>
+        </div>
+    </main>
+
+    <!-- Footer Info -->
+    <footer class="relative z-10 w-full p-4 text-center text-xs text-pink-400/60 pointer-events-none">
+        <p>Made with Endless Love • Drag to rotate 3D Heart • Scroll to Zoom</p>
+    </footer>
+
+    <!-- Loading Overlay for Heart Opening -->
+    <div id="loading-overlay"
+        class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-xl opacity-0 pointer-events-none transition-opacity duration-500">
+        <div class="relative flex items-center justify-center">
+            <!-- Pulsing Rings -->
+            <div class="w-32 h-32 rounded-full border-2 border-pink-500/30 animate-ping absolute"></div>
+            <div class="w-24 h-24 rounded-full border-2 border-rose-400/50 animate-pulse absolute"></div>
+
+            <!-- Floating Heart Icon inside Loader -->
+            <div class="relative z-10 text-pink-500">
+                <i data-lucide="heart" class="w-12 h-12 fill-pink-500 animate-bounce"></i>
+            </div>
+        </div>
+
+        <div class="mt-8 text-center px-4">
+            <h3 id="loader-title" class="font-cursive text-3xl text-pink-200 font-bold tracking-wide text-glow mb-2">
+                Unlocking Memories...</h3>
+            <p id="loader-sub" class="text-sm text-pink-300/80 font-light max-w-xs mx-auto">Gathering every heartbeat
+                and soft whisper spent with you...</p>
+
+            <!-- Progress Bar -->
+            <div class="w-64 h-1.5 bg-pink-950 rounded-full mt-6 mx-auto overflow-hidden border border-pink-800/40">
+                <div id="loader-progress"
+                    class="h-full bg-gradient-to-r from-pink-500 via-rose-400 to-red-500 w-0 transition-all duration-300 rounded-full shadow-lg shadow-pink-500/50">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Love Letter Modal Container -->
+    <div id="letter-modal"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md opacity-0 pointer-events-none transition-all duration-700">
+
+        <!-- Letter Card -->
+        <div id="letter-card"
+            class="glass-panel w-full max-w-2xl rounded-3xl p-6 sm:p-10 relative overflow-hidden transform scale-90 transition-all duration-700 border border-pink-400/30 shadow-2xl flex flex-col max-h-[90vh]">
+
+            <!-- Decorative corner accents -->
+            <div
+                class="absolute top-0 left-0 w-24 h-24 bg-gradient-to-br from-pink-500/20 to-transparent pointer-events-none">
+            </div>
+            <div
+                class="absolute bottom-0 right-0 w-24 h-24 bg-gradient-to-tl from-rose-500/20 to-transparent pointer-events-none">
+            </div>
+
+            <!-- Close Button -->
+            <button id="close-letter-btn"
+                class="absolute top-5 right-5 text-pink-300/70 hover:text-white bg-pink-950/40 hover:bg-pink-900/60 p-2 rounded-full transition-colors cursor-pointer border border-pink-500/20 z-20">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+
+            <!-- Letter Header -->
+            <div class="text-center pb-4 border-b border-pink-500/20 mb-6 relative">
+                <div class="inline-flex p-2 rounded-full bg-pink-500/10 mb-2 border border-pink-500/20">
+                    <i data-lucide="mail-open" class="w-6 h-6 text-pink-400"></i>
+                </div>
+                <h2 class="font-cursive text-3xl sm:text-4xl text-pink-200 font-bold text-glow">My Dearest Mahal</h2>
+                <p class="text-xs text-pink-300/70 uppercase tracking-widest mt-1">Written in the Stars • Sealed with a
+                    Heart</p>
+            </div>
+
+            <!-- Scrollable Letter Body -->
+            <div
+                class="custom-scrollbar overflow-y-auto pr-2 flex-1 space-y-4 text-pink-100 font-letter text-2xl sm:text-3xl leading-relaxed tracking-wide">
+                <p id="letter-text-1" class="opacity-0 transition-opacity duration-1000">
+                    From the moment you walked into my life, every ordinary day became something I never want to end.
+                </p>
+                <p id="letter-text-2" class="opacity-0 transition-opacity duration-1000">
+                    You are my calm, my laughter, and my favorite place to come home to.
+                </p>
+                <p id="letter-text-3" class="opacity-0 transition-opacity duration-1000">
+                    I don't always find the perfect words, so I built you a heart out of the three I never get tired of
+                    saying.
+                </p>
+                <div id="letter-signature"
+                    class="pt-6 text-right font-cursive text-3xl text-pink-300 opacity-0 transition-opacity duration-1000">
+                    I love you today, tomorrow,
+                    <br>and for all the days after.<br><br>
+                    <span class="text-pink-400 font-bold text-glow">Yours Truly ❤️ Jojo</span>
+                </div>
+            </div>
+
+            <!-- Letter Footer Actions -->
+            <div
+                class="pt-6 border-t border-pink-500/20 mt-6 flex justify-between items-center text-xs text-pink-300/70">
+                <span class="flex items-center space-x-1">
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5 text-pink-400"></i>
+                    <span>Infinite Love</span>
+                </span>
+                <button id="replay-animation-btn"
+                    class="hover:text-pink-200 underline cursor-pointer flex items-center space-x-1">
+                    <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
+                    <span>Replay Heart Entrance</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN THREE.JS & LOGIC SCRIPT -->
+    <script>
+        // --- Initialize Icons ---
+        lucide.createIcons();
+
+        // --- Application State ---
+        const state = {
+            isOpen: false,
+            isLoading: false,
+            isAudioPlaying: false,
+            heartColor: 0xff2a5f,
+            accentColor: 0xff73a1
+        };
+
+        // --- Web Audio Synthesizer (Romantic Soft Chords & Melody) ---
+        class RomanticAudio {
+            constructor() {
+                this.ctx = null;
+                this.isPlaying = false;
+                this.timer = null;
+            }
+
+            init() {
+                if (this.ctx) return;
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                this.ctx = new AudioContext();
+            }
+
+            playChord() {
+                if (!this.isPlaying || !this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                // Soft romantic chord progression in F major / D minor
+                const chords = [
+                    [174.61, 220.00, 261.63, 329.63], // Fmaj7
+                    [146.83, 174.61, 220.00, 261.63], // Dm7
+                    [130.81, 164.81, 196.00, 246.94], // Cmaj7
+                    [116.54, 146.83, 174.61, 220.00]  // Bbmaj7
+                ];
+
+                const chord = chords[Math.floor(Math.random() * chords.length)];
+
+                chord.forEach((freq, index) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now);
+
+                    // Soft attack, warm sustain, long decay
+                    gain.gain.setValueAtTime(0, now);
+                    gain.gain.linearRampToValueAtTime(0.04 - (index * 0.005), now + 1.5);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, now + 6.0);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start(now);
+                    osc.stop(now + 6.1);
+                });
+
+                // Arpeggio / gentle bells
+                const note = chord[Math.floor(Math.random() * chord.length)] * 2;
+                const bellOsc = this.ctx.createOscillator();
+                const bellGain = this.ctx.createGain();
+
+                bellOsc.type = 'triangle';
+                bellOsc.frequency.setValueAtTime(note, now + 0.5);
+
+                bellGain.gain.setValueAtTime(0, now + 0.5);
+                bellGain.gain.linearRampToValueAtTime(0.02, now + 0.7);
+                bellGain.gain.exponentialRampToValueAtTime(0.0001, now + 3.0);
+
+                bellOsc.connect(bellGain);
+                bellGain.connect(this.ctx.destination);
+
+                bellOsc.start(now + 0.5);
+                bellOsc.stop(now + 3.1);
+
+                this.timer = setTimeout(() => this.playChord(), 4500);
+            }
+
+            toggle() {
+                this.init();
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+
+                this.isPlaying = !this.isPlaying;
+                if (this.isPlaying) {
+                    this.playChord();
+                } else {
+                    clearTimeout(this.timer);
+                }
+                return this.isPlaying;
+            }
+        }
+
+        const romanticAudio = new RomanticAudio();
+
+        // Audio toggle handler
+        document.getElementById('audio-toggle').addEventListener('click', () => {
+            const isPlaying = romanticAudio.toggle();
+            const icon = document.getElementById('audio-icon');
+            if (isPlaying) {
+                icon.setAttribute('data-lucide', 'volume-2');
+                document.getElementById('audio-toggle').classList.add('bg-pink-600/40', 'border-pink-400');
+            } else {
+                icon.setAttribute('data-lucide', 'volume-x');
+                document.getElementById('audio-toggle').classList.remove('bg-pink-600/40', 'border-pink-400');
+            }
+            lucide.createIcons();
+        });
+
+
+        // --- Three.js Scene Setup ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x0d0208, 0.025);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 0, 28);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.2;
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxDistance = 50;
+        controls.minDistance = 10;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 1.2;
+
+        // --- Lighting ---
+        const ambientLight = new THREE.AmbientLight(0xffb6c1, 0.6);
+        scene.add(ambientLight);
+
+        const pointLight1 = new THREE.PointLight(0xff0055, 3, 50);
+        pointLight1.position.set(10, 15, 10);
+        scene.add(pointLight1);
+
+        const pointLight2 = new THREE.PointLight(0xff73a1, 2, 50);
+        pointLight2.position.set(-10, -10, -10);
+        scene.add(pointLight2);
+
+        // --- Heart Parametric Equation Helpers ---
+        // Generates 3D Heart coordinates based on mathematical formulas
+        function getHeartPoint(t, u) {
+            // Parametric 3D Heart surface
+            const x = 16 * Math.sin(t) ** 3 * Math.cos(u);
+            const y = (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+            const z = 16 * Math.sin(t) ** 3 * Math.sin(u);
+            return new THREE.Vector3(x * 0.4, y * 0.4, z * 0.4);
+        }
+
+        // --- 1. Heart Shell Particles & Outer Core ---
+        const particleCount = 6000;
+        const heartGeometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(particleCount * 3);
+        const originalPositions = new Float32Array(particleCount * 3);
+        const explodedPositions = new Float32Array(particleCount * 3);
+        const colors = new Float32Array(particleCount * 3);
+        const sizes = new Float32Array(particleCount);
+
+        const baseColor = new THREE.Color(0xff0055);
+        const highlightColor = new THREE.Color(0xffb3c6);
+
+        for (let i = 0; i < particleCount; i++) {
+            const t = Math.PI * (Math.random() - 0.5) * 2;
+            const u = Math.PI * (Math.random() - 0.5) * 2;
+
+            // Add slight randomness inside body
+            const scaleFactor = 0.8 + Math.random() * 0.25;
+            const p = getHeartPoint(t, u);
+            p.multiplyScalar(scaleFactor);
+
+            // Store original coordinates
+            positions[i * 3] = p.x;
+            positions[i * 3 + 1] = p.y;
+            positions[i * 3 + 2] = p.z;
+
+            originalPositions[i * 3] = p.x;
+            originalPositions[i * 3 + 1] = p.y;
+            originalPositions[i * 3 + 2] = p.z;
+
+            // Compute exploded position (blooming outward state)
+            const explodeVec = p.clone().normalize().multiplyScalar(15 + Math.random() * 20);
+            explodedPositions[i * 3] = explodeVec.x;
+            explodedPositions[i * 3 + 1] = explodeVec.y;
+            explodedPositions[i * 3 + 2] = explodeVec.z;
+
+            // Interpolate color gradient
+            const mixedColor = baseColor.clone().lerp(highlightColor, Math.random());
+            colors[i * 3] = mixedColor.r;
+            colors[i * 3 + 1] = mixedColor.g;
+            colors[i * 3 + 2] = mixedColor.b;
+
+            sizes[i] = Math.random() * 0.35 + 0.1;
+        }
+
+        heartGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        heartGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+        heartGeometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+        // Create glowing particle texture
+        function createParticleTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64;
+            canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+
+            const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+            gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+            gradient.addColorStop(0.3, 'rgba(255, 100, 150, 0.8)');
+            gradient.addColorStop(0.8, 'rgba(255, 0, 80, 0.2)');
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 64, 64);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            return texture;
+        }
+
+        const particleMaterial = new THREE.PointsMaterial({
+            size: 0.5,
+            vertexColors: true,
+            map: createParticleTexture(),
+            transparent: true,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+
+        const heartParticles = new THREE.Points(heartGeometry, particleMaterial);
+        scene.add(heartParticles);
+
+        // --- 2. Inner Glowing Core Heart (Mesh) ---
+        const heartShape = new THREE.Shape();
+        // 2D heart path for extruded central geometry
+        const x = 0, y = 0;
+        heartShape.moveTo(x + 2.5, y + 2.5);
+        heartShape.bezierCurveTo(x + 2.5, y + 2.5, x + 2, y, x, y);
+        heartShape.bezierCurveTo(x - 3, y, x - 3, y + 3.5, x - 3, y + 3.5);
+        heartShape.bezierCurveTo(x - 3, y + 5.5, x - 1, y + 7.7, x + 2.5, y + 9.5);
+        heartShape.bezierCurveTo(x + 6, y + 7.7, x + 8, y + 5.5, x + 8, y + 3.5);
+        heartShape.bezierCurveTo(x + 8, y, x + 6, y, x + 6, y);
+        heartShape.bezierCurveTo(x + 4.5, y, x + 2.5, y + 2.5, x + 2.5, y + 2.5);
+
+        const extrudeSettings = {
+            steps: 2,
+            depth: 1.5,
+            bevelEnabled: true,
+            bevelThickness: 1,
+            bevelSize: 1,
+            bevelSegments: 5
+        };
+
+        const meshGeometry = new THREE.ExtrudeGeometry(heartShape, extrudeSettings);
+        meshGeometry.center();
+
+        const innerHeartMaterial = new THREE.MeshPhongMaterial({
+            color: 0xff0044,
+            emissive: 0x880022,
+            specular: 0xffb6c1,
+            shininess: 100,
+            transparent: true,
+            opacity: 0.85,
+            wireframe: false
+        });
+
+        const innerHeartMesh = new THREE.Mesh(meshGeometry, innerHeartMaterial);
+        innerHeartMesh.scale.set(0.6, 0.6, 0.6);
+        innerHeartMesh.rotation.z = Math.PI; // Flip upright
+        scene.add(innerHeartMesh);
+
+        // --- 3. Floating 3D Text "I LOVE YOU" inside/around Heart ---
+        const canvasText = document.createElement('canvas');
+        canvasText.width = 1024;
+        canvasText.height = 256;
+        const ctxText = canvasText.getContext('2d');
+
+        ctxText.fillStyle = 'transparent';
+        ctxText.fillRect(0, 0, 1024, 256);
+        ctxText.font = 'Bold 90px "Dancing Script", cursive';
+        ctxText.fillStyle = '#ffffff';
+        ctxText.textAlign = 'center';
+        ctxText.shadowColor = '#ff0055';
+        ctxText.shadowBlur = 20;
+        ctxText.fillText('I LOVE YOU', 512, 150);
+
+        const textTexture = new THREE.CanvasTexture(canvasText);
+        const textMaterial = new THREE.MeshBasicMaterial({
+            map: textTexture,
+            transparent: true,
+            side: THREE.DoubleSide,
+            depthWrite: false
+        });
+
+        const textPlaneGeo = new THREE.PlaneGeometry(16, 4);
+        const textMesh = new THREE.Mesh(textPlaneGeo, textMaterial);
+        textMesh.position.set(0, 0, 0.5);
+        textMesh.scale.set(0, 0, 0); // Hidden initially until opened
+        scene.add(textMesh);
+
+
+        // --- 4. Ambient Floating Dust Particles ---
+        const dustCount = 800;
+        const dustGeo = new THREE.BufferGeometry();
+        const dustPos = new Float32Array(dustCount * 3);
+
+        for (let i = 0; i < dustCount * 3; i += 3) {
+            dustPos[i] = (Math.random() - 0.5) * 80;
+            dustPos[i + 1] = (Math.random() - 0.5) * 80;
+            dustPos[i + 2] = (Math.random() - 0.5) * 80;
+        }
+
+        dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
+        const dustMat = new THREE.PointsMaterial({
+            size: 0.3,
+            color: 0xffb3c6,
+            transparent: true,
+            opacity: 0.5,
+            blending: THREE.AdditiveBlending
+        });
+
+        const dustParticles = new THREE.Points(dustGeo, dustMat);
+        scene.add(dustParticles);
+
+
+        // --- Interaction Mechanics (Raycasting) ---
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        window.addEventListener('click', (e) => {
+            // Ignore clicks on UI buttons
+            if (e.target.closest('button') || state.isLoading || state.isOpen) return;
+
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObject(innerHeartMesh);
+
+            if (intersects.length > 0) {
+                triggerOpenHeart();
+            }
+        });
+
+
+        // --- Open Heart & Loading Sequence ---
+        function triggerOpenHeart() {
+            if (state.isLoading || state.isOpen) return;
+            state.isLoading = true;
+
+            const loader = document.getElementById('loading-overlay');
+            const progressBar = document.getElementById('loader-progress');
+            const loaderTitle = document.getElementById('loader-title');
+
+            // Show Loader Overlay
+            loader.classList.remove('pointer-events-none');
+            loader.classList.add('opacity-100');
+
+            // Progress Bar Animation
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += Math.random() * 20 + 10;
+                if (progress >= 100) {
+                    progress = 100;
+                    clearInterval(progressInterval);
+
+                    setTimeout(() => {
+                        // Hide Loader
+                        loader.classList.remove('opacity-100');
+                        loader.classList.add('pointer-events-none');
+
+                        // Execute Heart Burst & Unfold Animation
+                        executeUnfoldAnimation();
+                        state.isLoading = false;
+                        state.isOpen = true;
+                    }, 400);
+                }
+                progressBar.style.width = `${progress}%`;
+            }, 180);
+        }
+
+        // GSAP Transformation Animation
+        function executeUnfoldAnimation() {
+            const posAttr = heartGeometry.attributes.position;
+
+            // 1. Expand Particles into a glowing heart halo
+            gsap.to(posAttr.array, {
+                duration: 2.5,
+                ease: "power3.out",
+                endArray: explodedPositions,
+                onUpdate: () => {
+                    posAttr.needsUpdate = true;
+                }
+            });
+
+            // 2. Pulse and scale up the inner mesh heart
+            gsap.to(innerHeartMesh.scale, {
+                x: 1.2,
+                y: 1.2,
+                z: 1.2,
+                duration: 1.2,
+                yoyo: true,
+                repeat: 1,
+                ease: "sine.inOut"
+            });
+
+            // 3. Fade in "I LOVE YOU" text with spring effect
+            gsap.to(textMesh.scale, {
+                x: 1,
+                y: 1,
+                z: 1,
+                duration: 2,
+                delay: 0.8,
+                ease: "elastic.out(1, 0.4)"
+            });
+
+            // 4. Smooth camera zoom-in
+            gsap.to(camera.position, {
+                z: 20,
+                duration: 2.5,
+                ease: "power2.out"
+            });
+
+            // 5. Update UI controls
+            document.getElementById('ui-hint').classList.add('opacity-0');
+            document.getElementById('open-heart-btn').classList.add('hidden');
+
+            const letterBtn = document.getElementById('letter-trigger-btn');
+            letterBtn.classList.remove('hidden');
+            setTimeout(() => {
+                letterBtn.classList.remove('opacity-0');
+            }, 100);
+        }
+
+        // Replay/Reset Entrance
+        function resetHeartState() {
+            const posAttr = heartGeometry.attributes.position;
+
+            gsap.to(posAttr.array, {
+                duration: 1.5,
+                ease: "power2.inOut",
+                endArray: originalPositions,
+                onUpdate: () => {
+                    posAttr.needsUpdate = true;
+                }
+            });
+
+            gsap.to(textMesh.scale, { x: 0, y: 0, z: 0, duration: 0.8 });
+            gsap.to(camera.position, { z: 28, duration: 1.5 });
+
+            state.isOpen = false;
+            document.getElementById('ui-hint').classList.remove('opacity-0');
+            document.getElementById('open-heart-btn').classList.remove('hidden');
+            document.getElementById('letter-trigger-btn').classList.add('opacity-0', 'hidden');
+        }
+
+
+        // --- Event Listeners ---
+        document.getElementById('open-heart-btn').addEventListener('click', triggerOpenHeart);
+
+        // --- Love Letter Modal Handling ---
+        const letterModal = document.getElementById('letter-modal');
+        const letterCard = document.getElementById('letter-card');
+        const letterBtn = document.getElementById('letter-trigger-btn');
+        const closeLetterBtn = document.getElementById('close-letter-btn');
+        const replayBtn = document.getElementById('replay-animation-btn');
+
+        function openLetter() {
+            letterModal.classList.remove('pointer-events-none');
+            letterModal.classList.add('opacity-100');
+            letterCard.classList.remove('scale-90');
+            letterCard.classList.add('scale-100');
+
+            // Sequential text reveal
+            gsap.to('#letter-text-1', { opacity: 1, duration: 1, delay: 0.3 });
+            gsap.to('#letter-text-2', { opacity: 1, duration: 1, delay: 1.2 });
+            gsap.to('#letter-text-3', { opacity: 1, duration: 1, delay: 2.1 });
+            gsap.to('#letter-signature', { opacity: 1, duration: 1, delay: 3.0 });
+        }
+
+        function closeLetter() {
+            letterModal.classList.add('pointer-events-none');
+            letterModal.classList.remove('opacity-100');
+            letterCard.classList.add('scale-90');
+            letterCard.classList.remove('scale-100');
+        }
+
+        letterBtn.addEventListener('click', openLetter);
+        closeLetterBtn.addEventListener('click', closeLetter);
+
+        replayBtn.addEventListener('click', () => {
+            closeLetter();
+            setTimeout(resetHeartState, 400);
+        });
+
+        // Close modal on outside backdrop click
+        letterModal.addEventListener('click', (e) => {
+            if (e.target === letterModal) closeLetter();
+        });
+
+
+        // --- Animation Loop ---
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const elapsedTime = clock.getElapsedTime();
+
+            // Continuous Floating & Beating Motions
+            if (heartParticles) {
+                heartParticles.rotation.y = elapsedTime * 0.15;
+            }
+
+            if (innerHeartMesh) {
+                innerHeartMesh.rotation.y = elapsedTime * 0.3;
+                // Soft heart beat rhythm scale
+                const beat = 1 + Math.sin(elapsedTime * 3) * 0.04;
+                if (!state.isLoading) {
+                    innerHeartMesh.scale.set(0.6 * beat, 0.6 * beat, 0.6 * beat);
+                }
+            }
+
+            if (textMesh && state.isOpen) {
+                textMesh.position.y = Math.sin(elapsedTime * 2) * 0.3;
+            }
+
+            // Animate ambient dust floating upwards
+            if (dustParticles) {
+                const positions = dustParticles.geometry.attributes.position.array;
+                for (let i = 1; i < dustCount * 3; i += 3) {
+                    positions[i] += 0.02;
+                    if (positions[i] > 40) positions[i] = -40;
+                }
+                dustParticles.geometry.attributes.position.needsUpdate = true;
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // --- Window Resize Handler ---
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Start animation loop when window finishes loading
+        window.onload = function () {
+            animate();
+        };
+
+    </script>
+</body>
+
+</html>
